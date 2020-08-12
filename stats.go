@@ -1,20 +1,21 @@
 package loadtest
 
 import (
+	"fmt"
 	"math"
 	"time"
 )
 
 type BaseStats struct {
-	StartTime int64
-	EndTime   int64
+	StartTime time.Time
+	EndTime   time.Time
 	RunsCount uint64
 	OkRuns    uint64
 	MinTime   time.Duration
 	MaxTime   time.Duration
 }
 
-type WorkerStats struct {
+type workerStats struct {
 	BaseStats
 	cumulativeTime time.Duration
 }
@@ -25,7 +26,7 @@ type ResultStats struct {
 	OkPercent float64
 }
 
-func (stats *WorkerStats) affectStat(isOk bool, runTime time.Duration) {
+func (stats *workerStats) affectStat(isOk bool, runTime time.Duration) {
 	stats.RunsCount += 1
 
 	if isOk {
@@ -43,17 +44,17 @@ func (stats *WorkerStats) affectStat(isOk bool, runTime time.Duration) {
 
 }
 
-func (stats *WorkerStats) endTest() {
-	stats.EndTime = curTime()
+func (stats *workerStats) endTest() {
+	stats.EndTime = time.Now()
 }
 
-func initStats() *WorkerStats {
-	stats := WorkerStats{
+func initStats() *workerStats {
+	stats := workerStats{
 		cumulativeTime: 0,
 	}
 
-	stats.StartTime = curTime()
-	stats.EndTime = 0
+	stats.StartTime = time.Now()
+	stats.EndTime = time.Now()
 	stats.RunsCount = 0
 	stats.OkRuns = 0
 	stats.MinTime = math.MaxInt64
@@ -62,7 +63,7 @@ func initStats() *WorkerStats {
 	return &stats
 }
 
-func constructTotalStats(allStats []*WorkerStats) *ResultStats {
+func constructTotalStats(allStats []*workerStats) *ResultStats {
 	totalStats := ResultStats{}
 
 	totalTime := time.Duration(0)
@@ -70,8 +71,8 @@ func constructTotalStats(allStats []*WorkerStats) *ResultStats {
 	totalStats.MinTime = time.Duration(math.MaxInt64)
 	totalStats.MaxTime = time.Duration(0)
 
-	totalStats.StartTime = int64(math.MaxInt64)
-	totalStats.EndTime = int64(0)
+	totalStats.StartTime = time.Unix(0, 0)
+	totalStats.EndTime = time.Now()
 
 	for _, stats := range allStats {
 		if stats.MinTime < totalStats.MinTime {
@@ -82,11 +83,11 @@ func constructTotalStats(allStats []*WorkerStats) *ResultStats {
 			totalStats.MaxTime = stats.MaxTime
 		}
 
-		if stats.StartTime < totalStats.StartTime {
+		if totalStats.StartTime.Sub(stats.StartTime) < 0 {
 			totalStats.StartTime = stats.StartTime
 		}
 
-		if stats.EndTime > totalStats.EndTime {
+		if stats.EndTime.Sub(totalStats.EndTime) > 0 {
 			totalStats.EndTime = stats.EndTime
 		}
 
@@ -103,4 +104,30 @@ func constructTotalStats(allStats []*WorkerStats) *ResultStats {
 	avg := float64(totalTime) / float64(totalStats.RunsCount)
 	totalStats.AvgTime = time.Duration(math.Round(avg))
 	return &totalStats
+}
+
+func (s *ResultStats) String() string {
+	fmStr := `
+*** Test results ***
+
+Runs %d: ok runs %d (%.2f%%)
+Duration: 
+	Avg = %s	
+	Min = %s	
+	Max = %s
+
+Start time: %s
+End time  : %s
+Duration  : %s
+`
+	return fmt.Sprintf(fmStr,
+		s.RunsCount, s.OkRuns, s.OkPercent,
+		s.AvgTime,
+		s.MinTime,
+		s.MaxTime,
+
+		s.StartTime,
+		s.EndTime,
+		s.EndTime.Sub(s.StartTime),
+	)
 }

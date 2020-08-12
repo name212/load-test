@@ -23,7 +23,7 @@ func (t *LoadTest) Start() *ResultStats {
 	doneChans := make([]chan bool, t.Concurrent)
 
 	var workers = make([]Worker, t.Concurrent)
-	var allStats = make([]*WorkerStats, t.Concurrent)
+	var allStats = make([]*workerStats, t.Concurrent)
 
 	for i := uint32(0); i < t.Concurrent; i++ {
 		waitGroup.Add(1)

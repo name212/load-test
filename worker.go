@@ -9,7 +9,7 @@ import (
 type Worker struct {
 	doneSigChain chan bool
 	id           uint32
-	stats        *WorkerStats
+	stats        *workerStats
 	runner       TestRunner
 	workersGroup *sync.WaitGroup
 }
