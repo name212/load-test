@@ -12,23 +12,30 @@ type TestRunner interface {
 
 type TestRunnerConstructor func() TestRunner
 
+type FinishStrategyConst func(uint32) FinishTestStrategy
+
 type LoadTest struct {
-	Constructor       TestRunnerConstructor
-	Concurrent        uint32
-	DurationInSeconds uint32
+	Constructor         TestRunnerConstructor
+	Concurrent          uint32
+	DurationInSeconds   uint32
+	FinishStrategyConst FinishStrategyConst
 }
 
 func (t *LoadTest) Start() *ResultStats {
 	waitGroup := sync.WaitGroup{}
-	doneChans := make([]chan bool, t.Concurrent)
 
 	var workers = make([]Worker, t.Concurrent)
 	var allStats = make([]*workerStats, t.Concurrent)
+	finishStrategyConstructor := t.FinishStrategyConst
+	if finishStrategyConstructor == nil {
+		finishStrategyConstructor = GetOneChanStrategy
+	}
+	finishStrategy := finishStrategyConstructor(t.Concurrent)
 
 	for i := uint32(0); i < t.Concurrent; i++ {
 		waitGroup.Add(1)
 		stats := initStats()
-		doneChan := make(chan bool, 1)
+		doneChan := finishStrategy.getFinishChan()
 		worker := Worker{
 			workersGroup: &waitGroup,
 			id:           i + 1,
@@ -38,17 +45,16 @@ func (t *LoadTest) Start() *ResultStats {
 		}
 		workers[i] = worker
 		allStats[i] = stats
-		doneChans[i] = doneChan
 		go worker.run()
 	}
 
 	time.Sleep(time.Duration(t.DurationInSeconds) * time.Second)
 
-	for _, doneChan := range doneChans {
-		doneChan <- true
-	}
+	finishStrategy.finishTesting()
+
 	fmt.Println("Send done flag to all workers")
 	waitGroup.Wait()
 	fmt.Println("All workers finished")
+
 	return constructTotalStats(allStats)
 }

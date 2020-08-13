@@ -1,7 +1,6 @@
 package loadtest
 
 import (
-	"fmt"
 	"sync"
 	"time"
 )
@@ -20,7 +19,7 @@ func (w *Worker) run() {
 	for {
 		select {
 		case <-w.doneSigChain:
-			fmt.Println("Getting done signal", w.id)
+			//fmt.Println("Getting done signal", w.id)
 			w.stats.endTest()
 			return
 		default:

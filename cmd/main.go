@@ -12,8 +12,8 @@ func main() {
 		Constructor: func() loadtest.TestRunner {
 			return &TestForRunner{}
 		},
-		Concurrent:        500,
-		DurationInSeconds: 10,
+		Concurrent:        100000,
+		DurationInSeconds: 25,
 	}
 
 	stats := test.Start()
@@ -30,6 +30,6 @@ func (t *TestForRunner) Run(workerId uint32) bool {
 	time.Sleep(time.Duration(timeToSleep) * time.Millisecond)
 	isOk := rand.Int31n(2) > 0
 
-	fmt.Println("Worker ", workerId, " isOk = ", isOk, " after ", timeToSleep, "ms")
+	//fmt.Println("Worker ", workerId, " isOk = ", isOk, " after ", timeToSleep, "ms")
 	return isOk
 }
